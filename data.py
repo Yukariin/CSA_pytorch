@@ -37,7 +37,7 @@ class DS(Dataset):
     @staticmethod
     def random_mask(height=256, width=256,
                     min_stroke=2, max_stroke=5,
-                    min_vertex=1, max_vertex=12,
+                    min_vertex=2, max_vertex=12,
                     min_brush_width=10, max_brush_width=20,
                     min_lenght=10, max_length=50):
         mask = np.zeros((height, width))
@@ -60,8 +60,10 @@ class DS(Dataset):
                 cv2.line(mask, (start_y, start_x), (end_y, end_x), 1., brush_width)
 
                 start_x, start_y = end_x, end_y
+
         if np.random.random() < 0.5:
             mask = np.fliplr(mask)
         if np.random.random() < 0.5:
             mask = np.flipud(mask)
+
         return mask.reshape((1,)+mask.shape).astype(np.float32)
