@@ -314,9 +314,10 @@ class PatchDiscriminator(nn.Module):
                  norm='instance', act='leaky_relu'):
         super().__init__()
 
+        c_in = c_img + c_img
         cnum = 64
         self.discriminator = nn.Sequential(
-            nn.Conv2d(c_img, cnum, 4, 2, 1),
+            nn.Conv2d(c_in, cnum, 4, 2, 1),
             get_activation(act),
 
             nn.Conv2d(cnum, cnum*2, 4, 2, 1),
@@ -333,7 +334,8 @@ class PatchDiscriminator(nn.Module):
 
             nn.Conv2d(cnum*8, 1, 4, 1, 1))
     
-    def forward(self, x):
+    def forward(self, x1, x2):
+        x = torch.cat([x1, x2], 1)
         return self.discriminator(x)
 
 
@@ -342,10 +344,11 @@ class FeaturePatchDiscriminator(nn.Module):
                  norm='instance', act='leaky_relu'):
         super().__init__()
 
+        c_in = c_img + c_img
         cnum = 64
         self.discriminator = nn.Sequential(
             # VGG-16 up to 4_3
-            nn.Conv2d(c_img, cnum, kernel_size=3, padding=1),
+            nn.Conv2d(c_in, cnum, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
             nn.Conv2d(cnum, cnum, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
@@ -380,7 +383,8 @@ class FeaturePatchDiscriminator(nn.Module):
             get_norm(norm, cnum*8),
             get_activation(act),
 
-            nn.Conv2d(cnum*8, 1, 4, 1, 1))
+            nn.Conv2d(cnum*8, cnum*8, 4, 1, 1))
 
-    def forward(self, x):
+    def forward(self, x1, x2):
+        x = torch.cat([x1, x2], 1)
         return self.discriminator(x)

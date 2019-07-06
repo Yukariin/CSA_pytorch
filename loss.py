@@ -60,8 +60,8 @@ class ConsistencyLoss(nn.Module):
 
 
 def calc_gan_loss(discriminator, output, target):
-    y_pred_fake = discriminator(output)
-    y_pred = discriminator(target)
+    y_pred_fake = discriminator(output, target)
+    y_pred = discriminator(target, output)
 
     g_loss = (torch.mean((y_pred - torch.mean(y_pred_fake) + 1.) ** 2) + torch.mean((y_pred_fake - torch.mean(y_pred) - 1.) ** 2))/2
     d_loss = (torch.mean((y_pred - torch.mean(y_pred_fake) - 1.) ** 2) + torch.mean((y_pred_fake - torch.mean(y_pred) + 1.) ** 2))/2
