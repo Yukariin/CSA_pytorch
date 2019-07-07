@@ -33,21 +33,12 @@ class VGG16FeatureExtractor(nn.Module):
         return results[1:]
     
 
-class L2Loss(nn.Module):
-    def __init__(self):
-        super().__init__()
-
-    def forward(self, output, target):
-        lossvalue = torch.norm(output-target, p=2, dim=1).mean()
-        return lossvalue
-
-
 class ConsistencyLoss(nn.Module):
     def __init__(self):
         super().__init__()
 
         self.vgg = VGG16FeatureExtractor()
-        self.l2 = L2Loss()
+        self.l2 = nn.MSELoss()
 
     def forward(self, csa, csa_d, target, mask):
         vgg_gt = self.vgg(target)
