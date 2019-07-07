@@ -46,7 +46,7 @@ class ConsistencyLoss(nn.Module):
 
         mask_r = F.interpolate(mask, size=list(csa.shape)[2:4])
 
-        lossvalue = (self.l2(csa*mask_r, vgg_gt*mask_r) + self.l2(csa_d*mask_r, vgg_gt*mask_r))/2
+        lossvalue = self.l2(csa*mask_r, vgg_gt*mask_r) + self.l2(csa_d*mask_r, vgg_gt*mask_r)
         return lossvalue
 
 
