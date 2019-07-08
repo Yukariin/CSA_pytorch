@@ -38,7 +38,7 @@ class DS(Dataset):
     def random_mask(height=256, width=256,
                     min_stroke=2, max_stroke=5,
                     min_vertex=2, max_vertex=12,
-                    min_brush_width=10, max_brush_width=20,
+                    min_brush_width=7, max_brush_width=20,
                     min_lenght=10, max_length=50):
         mask = np.zeros((height, width))
 
@@ -47,17 +47,19 @@ class DS(Dataset):
 
         for _ in range(num_stroke):
             num_vertex = np.random.randint(min_vertex, max_vertex+1)
-            start_x = np.random.randint(width)
-            start_y = np.random.randint(height)
             brush_width = np.random.randint(min_brush_width, max_brush_width+1)
+            start_x = np.random.randint(height)
+            start_y = np.random.randint(width)
 
             for _ in range(num_vertex):
                 angle = np.random.uniform(max_angle)
                 length = np.random.randint(min_lenght, max_length+1)
                 end_x = (start_x + length * np.sin(angle)).astype(np.int32)
                 end_y = (start_y + length * np.cos(angle)).astype(np.int32)
+                end_x = max(0, min(end_x, height))
+                end_y = max(0, min(end_y, width))
 
-                cv2.line(mask, (start_y, start_x), (end_y, end_x), 1., brush_width)
+                cv2.line(mask, (start_x, start_y), (end_x, end_y), 1., brush_width)
 
                 start_x, start_y = end_x, end_y
 
