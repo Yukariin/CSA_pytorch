@@ -347,7 +347,7 @@ class FeaturePatchDiscriminator(nn.Module):
         c_in = c_img + c_img
         cnum = 64
         self.discriminator = nn.Sequential(
-            # VGG-16 up to 4_3
+            # VGG-16 up to 3rd pooling
             nn.Conv2d(c_in, cnum, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
             nn.Conv2d(cnum, cnum, kernel_size=3, padding=1),
@@ -368,15 +368,9 @@ class FeaturePatchDiscriminator(nn.Module):
             nn.ReLU(inplace=True),
 
             nn.MaxPool2d(kernel_size=2, stride=2),
-            nn.Conv2d(cnum*4, cnum*8, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(cnum*8, cnum*8, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(cnum*8, cnum*8, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
 
             # Discriminator
-            nn.Conv2d(cnum*8, cnum*8, 4, 2, 1),
+            nn.Conv2d(cnum*4, cnum*8, 4, 2, 1),
             get_activation(act),
 
             nn.Conv2d(cnum*8, cnum*8, 4, 1, 1),
