@@ -29,50 +29,6 @@ def get_activation(name):
     return activation
 
 
-class Conv2dSame(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, stride):
-        super().__init__()
-
-        padding = self.conv_same_pad(kernel_size, stride)
-        if type(padding) is not tuple:
-            self.conv = nn.Conv2d(
-                in_channels, out_channels, kernel_size, stride, padding)
-        else:
-            self.conv = nn.Sequential(
-                nn.ConstantPad2d(padding*2, 0),
-                nn.Conv2d(in_channels, out_channels, kernel_size, stride, 0)
-            )
-    
-    def conv_same_pad(self, ksize, stride):
-        if (ksize - stride) % 2 == 0:
-            return (ksize - stride) // 2
-        else:
-            left = (ksize - stride) // 2
-            right = left + 1
-            return left, right
-
-    def forward(self, x):
-        return self.conv(x)
-
-
-class ConvTranspose2dSame(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, stride):
-        super().__init__()
-
-        padding, output_padding = self.deconv_same_pad(kernel_size, stride)
-        self.trans_conv = nn.ConvTranspose2d(
-            in_channels, out_channels, kernel_size, stride,
-            padding, output_padding)
-
-    def deconv_same_pad(self, ksize, stride):
-        pad = (ksize - stride + 1) // 2
-        outpad = 2 * pad + stride - ksize
-        return pad, outpad
-
-    def forward(self, x):
-        return self.trans_conv(x)
-
-
 class CoarseEncodeBlock(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, stride,
                  normalization=None, activation=None):
@@ -82,7 +38,7 @@ class CoarseEncodeBlock(nn.Module):
         if activation:
             layers.append(get_activation(activation))
         layers.append(
-            Conv2dSame(in_channels, out_channels, kernel_size, stride))
+            nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding=1))
         if normalization:
             layers.append(get_norm(normalization, out_channels))
         self.encode = nn.Sequential(*layers)
@@ -100,7 +56,7 @@ class CoarseDecodeBlock(nn.Module):
         if activation:
             layers.append(get_activation(activation))
         layers.append(
-            ConvTranspose2dSame(in_channels, out_channels, kernel_size, stride))
+            nn.ConvTranspose2d(in_channels, out_channels, kernel_size, stride, padding=1))
         if normalization:
             layers.append(get_norm(normalization, out_channels))
         self.decode = nn.Sequential(*layers)
@@ -116,7 +72,7 @@ class CoarseNet(nn.Module):
 
         cnum = 64
 
-        self.en_1 = Conv2dSame(c_img, cnum, 4, 2)
+        self.en_1 = nn.Conv2d(c_img, cnum, 4, 2, padding=1)
         self.en_2 = CoarseEncodeBlock(cnum, cnum*2, 4, 2, normalization=norm, activation=act_en)
         self.en_3 = CoarseEncodeBlock(cnum*2, cnum*4, 4, 2, normalization=norm, activation=act_en)
         self.en_4 = CoarseEncodeBlock(cnum*4, cnum*8, 4, 2, normalization=norm, activation=act_en)
@@ -134,7 +90,7 @@ class CoarseNet(nn.Module):
         self.de_2 = CoarseDecodeBlock(cnum*2*2, cnum, 4, 2, normalization=norm, activation=act_de)
         self.de_1 = nn.Sequential(
             get_activation(act_de),
-            ConvTranspose2dSame(cnum*2, c_img, 4, 2),
+            nn.ConvTranspose2d(cnum*2, c_img, 4, 2, padding=1),
             get_activation('tanh'))
     
     def forward(self, x):
@@ -182,7 +138,7 @@ class RefineEncodeBlock(nn.Module):
         if activation:
             layers.append(get_activation(activation))
         layers.append(
-            Conv2dSame(in_channels, out_channels, 3, 1))
+            nn.Conv2d(in_channels, out_channels, 3, 1, padding=1))
         if normalization:
             layers.append(get_norm(normalization, out_channels))
         self.encode = nn.Sequential(*layers)
@@ -200,14 +156,14 @@ class RefineDecodeBlock(nn.Module):
         if activation:
             layers.append(get_activation(activation))
         layers.append(
-            ConvTranspose2dSame(in_channels, out_channels, 3, 1))
+            nn.ConvTranspose2d(in_channels, out_channels, 3, 1, padding=1))
         if normalization:
             layers.append(get_norm(normalization, out_channels))
 
         if activation:
             layers.append(get_activation(activation))
         layers.append(
-            ConvTranspose2dSame(out_channels, out_channels, 4, 2))
+            nn.ConvTranspose2d(out_channels, out_channels, 4, 2, padding=1))
         if normalization:
             layers.append(get_norm(normalization, out_channels))
         self.decode = nn.Sequential(*layers)
@@ -224,7 +180,7 @@ class RefineNet(nn.Module):
         c_in = c_img + c_img
         cnum = 64
 
-        self.en_1 = Conv2dSame(c_in, cnum, 3, 1)
+        self.en_1 = nn.Conv2d(c_in, cnum, 3, 1, padding=1)
         self.en_2 = RefineEncodeBlock(cnum, cnum*2, normalization=norm, activation=act_en)
         self.en_3 = RefineEncodeBlock(cnum*2, cnum*4, normalization=norm, activation=act_en)
         self.en_4 = RefineEncodeBlock(cnum*4, cnum*8, normalization=norm, activation=act_en)
@@ -234,11 +190,11 @@ class RefineNet(nn.Module):
         self.en_8 = RefineEncodeBlock(cnum*8, cnum*8, normalization=norm, activation=act_en)
         self.en_9 = nn.Sequential(
             get_activation(act_en),
-            Conv2dSame(cnum*8, cnum*8, 4, 2))
+            nn.Conv2d(cnum*8, cnum*8, 4, 2, padding=1))
 
         self.de_9 = nn.Sequential(
             get_activation(act_de),
-            ConvTranspose2dSame(cnum*8, cnum*8, 4, 2),
+            nn.ConvTranspose2d(cnum*8, cnum*8, 4, 2, padding=1),
             get_norm(norm, cnum*8))
         self.de_8 = RefineDecodeBlock(cnum*8*2, cnum*8, normalization=norm, activation=act_de)
         self.de_7 = RefineDecodeBlock(cnum*8*2, cnum*8, normalization=norm, activation=act_de)
@@ -249,7 +205,7 @@ class RefineNet(nn.Module):
         self.de_2 = RefineDecodeBlock(cnum*2*2, cnum, normalization=norm, activation=act_de)
         self.de_1 = nn.Sequential(
             get_activation(act_de),
-            ConvTranspose2dSame(cnum*2, c_img, 3, 1))
+            nn.ConvTranspose2d(cnum*2, c_img, 3, 1, padding=1))
 
     def forward(self, x1, x2):
         x = torch.cat([x1, x2], 1)
