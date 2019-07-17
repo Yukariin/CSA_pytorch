@@ -11,31 +11,9 @@ from torchvision import transforms
 from torchvision.utils import make_grid, save_image
 from tqdm import tqdm
 
-from data import DS
+from data import DS, InfiniteSampler
 from loss import ConsistencyLoss, calc_gan_loss
 from model import InpaintNet, FeaturePatchDiscriminator, PatchDiscriminator
-
-
-class InfiniteSampler(data.sampler.Sampler):
-    def __init__(self, num_samples):
-        self.num_samples = num_samples
-
-    def __iter__(self):
-        return iter(self.loop())
-
-    def __len__(self):
-        return 2 ** 31
-
-    def loop(self):
-        i = 0
-        order = np.random.permutation(self.num_samples)
-        while True:
-            yield order[i]
-            i += 1
-            if i >= self.num_samples:
-                np.random.seed()
-                order = np.random.permutation(self.num_samples)
-                i = 0
 
 
 parser = argparse.ArgumentParser()
@@ -67,9 +45,12 @@ writer = SummaryWriter()
 size = (args.image_size, args.image_size)
 train_tf = transforms.Compose([
     transforms.Resize(size),
-    transforms.RandomAffine(10, (0.1,0.1), (0.9,1.1), 5, resample=PIL.Image.BILINEAR),
-    transforms.ColorJitter(0.4, 0.4, 0.4),
     transforms.RandomHorizontalFlip(),
+    transforms.RandomChoice([
+        transforms.ColorJitter(0.3, 0.3, 0.3),
+        transforms.RandomGrayscale(),
+    ]),
+    transforms.RandomAffine(10, (0.1,0.1), (0.8,1.2), 5, resample=PIL.Image.BILINEAR),
     transforms.ToTensor(),
 ])
 
@@ -118,9 +99,9 @@ for i in tqdm(range(start_iter, args.max_iter)):
     pg_loss, pd_loss = calc_gan_loss(pd_model, refine_result, img)
 
     recon_loss = l1(coarse_result, img) + l1(refine_result, img)
-    g_loss = fg_loss + pg_loss
+    gan_loss = fg_loss + pg_loss
     cons_loss = cons(csa, csa_d, img, mask)
-    total_loss = 1*recon_loss + 0.01*cons_loss + 0.002*g_loss
+    total_loss = 1*recon_loss + 0.01*cons_loss + 0.002*gan_loss
     g_optimizer.zero_grad()
     total_loss.backward(retain_graph=True)
     g_optimizer.step()
@@ -144,7 +125,7 @@ for i in tqdm(range(start_iter, args.max_iter)):
     if (i + 1) % args.log_interval == 0:
         writer.add_scalar('g_loss/recon_loss', recon_loss.item(), i + 1)
         writer.add_scalar('g_loss/cons_loss', cons_loss.item(), i + 1)
-        writer.add_scalar('g_loss/g_loss', g_loss.item(), i + 1)
+        writer.add_scalar('g_loss/gan_loss', gan_loss.item(), i + 1)
         writer.add_scalar('g_loss/total_loss', total_loss.item(), i + 1)
         writer.add_scalar('d_loss/fd_loss', fd_loss.item(), i + 1)
         writer.add_scalar('d_loss/pd_loss', pd_loss.item(), i + 1)
