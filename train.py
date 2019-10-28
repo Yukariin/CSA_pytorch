@@ -45,12 +45,7 @@ writer = SummaryWriter()
 size = (args.image_size, args.image_size)
 train_tf = transforms.Compose([
     transforms.Resize(size),
-    transforms.RandomHorizontalFlip(),
-    transforms.RandomChoice([
-        transforms.ColorJitter(0.3, 0.3, 0.3),
-        transforms.RandomGrayscale(),
-    ]),
-    transforms.RandomAffine(10, (0.1,0.1), (0.8,1.2), 5, resample=PIL.Image.BILINEAR),
+    transforms.RandomGrayscale(),
     transforms.ToTensor(),
 ])
 
