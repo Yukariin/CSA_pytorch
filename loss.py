@@ -2,6 +2,12 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 from torchvision import models
+from torchvision import transforms
+
+
+def denorm(x):
+    out = (x + 1) / 2 # [-1,1] -> [0,1]
+    return out.clamp_(0, 1)
 
 
 class VGG16FeatureExtractor(nn.Module):
@@ -15,10 +21,10 @@ class VGG16FeatureExtractor(nn.Module):
         self.enc_3 = nn.Sequential(*vgg16.features[10:17])
         self.enc_4 = nn.Sequential(*vgg16.features[17:23])
 
-        # print(self.enc_1)
-        # print(self.enc_2)
-        # print(self.enc_3)
-        # print(self.enc_4)
+        #print(self.enc_1)
+        #print(self.enc_2)
+        #print(self.enc_3)
+        #print(self.enc_4)
 
         # fix the encoder
         for i in range(4):
@@ -37,11 +43,23 @@ class ConsistencyLoss(nn.Module):
     def __init__(self):
         super().__init__()
 
+        self.normalize = transforms.Normalize(
+            mean=[0.485, 0.456, 0.406],
+            std=[0.229, 0.224, 0.225]
+        )
         self.vgg = VGG16FeatureExtractor()
         self.l2 = nn.MSELoss()
 
     def forward(self, csa, csa_d, target, mask):
-        vgg_gt = self.vgg(target)
+        # https://pytorch.org/docs/stable/torchvision/models.html
+        # Pre-trained VGG16 model expect input images normalized in the same way.
+        # The images have to be loaded in to a range of [0, 1]
+        # and then normalized using mean = [0.485, 0.456, 0.406] and std = [0.229, 0.224, 0.225].
+        t = denorm(target) # [-1,1] -> [0,1]
+        t = self.normalize(t[0]) # BxCxHxW -> CxHxW -> normalize
+        t = t.unsqueeze(0) # CxHxW -> BxCxHxW
+
+        vgg_gt = self.vgg(t)
         vgg_gt = vgg_gt[-1]
 
         mask_r = F.interpolate(mask, size=csa.size()[2:])

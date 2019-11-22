@@ -13,7 +13,7 @@ def get_norm(name, out_channels):
     return norm
 
 
-def get_activation(name):
+def get_act(name):
     if name == 'relu':
         activation = nn.ReLU(inplace=True)
     elif name == 'elu':
@@ -36,7 +36,7 @@ class CoarseEncodeBlock(nn.Module):
 
         layers = []
         if activation:
-            layers.append(get_activation(activation))
+            layers.append(get_act(activation))
         layers.append(
             nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding=1))
         if normalization:
@@ -54,7 +54,7 @@ class CoarseDecodeBlock(nn.Module):
         
         layers = []
         if activation:
-            layers.append(get_activation(activation))
+            layers.append(get_act(activation))
         layers.append(
             nn.ConvTranspose2d(in_channels, out_channels, kernel_size, stride, padding=1))
         if normalization:
@@ -89,9 +89,9 @@ class CoarseNet(nn.Module):
         self.de_3 = CoarseDecodeBlock(cnum*4*2, cnum*2, 4, 2, normalization=norm, activation=act_de)
         self.de_2 = CoarseDecodeBlock(cnum*2*2, cnum, 4, 2, normalization=norm, activation=act_de)
         self.de_1 = nn.Sequential(
-            get_activation(act_de),
+            get_act(act_de),
             nn.ConvTranspose2d(cnum*2, c_img, 4, 2, padding=1),
-            get_activation('tanh'))
+            get_act('tanh'))
     
     def forward(self, x):
         out_1 = self.en_1(x)
@@ -129,14 +129,14 @@ class RefineEncodeBlock(nn.Module):
 
         layers = []
         if activation:
-            layers.append(get_activation(activation))
+            layers.append(get_act(activation))
         layers.append(
             nn.Conv2d(in_channels, in_channels, 4, 2, dilation=2, padding=3))
         if normalization:
             layers.append(get_norm(normalization, out_channels))
 
         if activation:
-            layers.append(get_activation(activation))
+            layers.append(get_act(activation))
         layers.append(
             nn.Conv2d(in_channels, out_channels, 3, 1, padding=1))
         if normalization:
@@ -154,14 +154,14 @@ class RefineDecodeBlock(nn.Module):
         
         layers = []
         if activation:
-            layers.append(get_activation(activation))
+            layers.append(get_act(activation))
         layers.append(
             nn.ConvTranspose2d(in_channels, out_channels, 3, 1, padding=1))
         if normalization:
             layers.append(get_norm(normalization, out_channels))
 
         if activation:
-            layers.append(get_activation(activation))
+            layers.append(get_act(activation))
         layers.append(
             nn.ConvTranspose2d(out_channels, out_channels, 4, 2, padding=1))
         if normalization:
@@ -189,11 +189,11 @@ class RefineNet(nn.Module):
         self.en_7 = RefineEncodeBlock(cnum*8, cnum*8, normalization=norm, activation=act_en)
         self.en_8 = RefineEncodeBlock(cnum*8, cnum*8, normalization=norm, activation=act_en)
         self.en_9 = nn.Sequential(
-            get_activation(act_en),
+            get_act(act_en),
             nn.Conv2d(cnum*8, cnum*8, 4, 2, padding=1))
 
         self.de_9 = nn.Sequential(
-            get_activation(act_de),
+            get_act(act_de),
             nn.ConvTranspose2d(cnum*8, cnum*8, 4, 2, padding=1),
             get_norm(norm, cnum*8))
         self.de_8 = RefineDecodeBlock(cnum*8*2, cnum*8, normalization=norm, activation=act_de)
@@ -204,7 +204,7 @@ class RefineNet(nn.Module):
         self.de_3 = RefineDecodeBlock(cnum*4*2, cnum*2, normalization=norm, activation=act_de)
         self.de_2 = RefineDecodeBlock(cnum*2*2, cnum, normalization=norm, activation=act_de)
         self.de_1 = nn.Sequential(
-            get_activation(act_de),
+            get_act(act_de),
             nn.ConvTranspose2d(cnum*2, c_img, 3, 1, padding=1))
 
     def forward(self, x1, x2):
@@ -274,19 +274,19 @@ class PatchDiscriminator(nn.Module):
         cnum = 64
         self.discriminator = nn.Sequential(
             nn.Conv2d(c_in, cnum, 4, 2, 1),
-            get_activation(act),
+            get_act(act),
 
             nn.Conv2d(cnum, cnum*2, 4, 2, 1),
             get_norm(norm, cnum*2),
-            get_activation(act),
+            get_act(act),
 
             nn.Conv2d(cnum*2, cnum*4, 4, 2, 1),
             get_norm(norm, cnum*4),
-            get_activation(act),
+            get_act(act),
 
             nn.Conv2d(cnum*4, cnum*8, 4, 1, 1),
             get_norm(norm, cnum*8),
-            get_activation(act),
+            get_act(act),
 
             nn.Conv2d(cnum*8, 1, 4, 1, 1))
     
@@ -327,11 +327,11 @@ class FeaturePatchDiscriminator(nn.Module):
 
             # Discriminator
             nn.Conv2d(cnum*4, cnum*8, 4, 2, 1),
-            get_activation(act),
+            get_act(act),
 
             nn.Conv2d(cnum*8, cnum*8, 4, 1, 1),
             get_norm(norm, cnum*8),
-            get_activation(act),
+            get_act(act),
 
             nn.Conv2d(cnum*8, cnum*8, 4, 1, 1))
 
