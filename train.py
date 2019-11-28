@@ -45,6 +45,7 @@ writer = SummaryWriter()
 size = (args.image_size, args.image_size)
 train_tf = transforms.Compose([
     transforms.Resize(size),
+    transforms.RandomHorizontalFlip(),
     transforms.RandomGrayscale(),
     transforms.ToTensor(),
 ])
@@ -129,7 +130,7 @@ for i in tqdm(range(start_iter, args.max_iter)):
         out = (x + 1) / 2 # [-1,1] -> [0,1]
         return out.clamp_(0, 1)
     if (i + 1) % args.vis_interval == 0:
-        ims = torch.cat([img, masked, coarse_result, refine_result], dim=3)
-        writer.add_images('raw_masked_coarse_refine', denorm(ims), i + 1)
+        ims = torch.cat([img, masked, refine_result], dim=3)
+        writer.add_images('raw_masked_refine', denorm(ims), i + 1)
 
 writer.close()
